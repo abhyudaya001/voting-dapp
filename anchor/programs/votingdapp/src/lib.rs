@@ -2,69 +2,52 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("coUnmi3oBUtwtd9fjeAvSsJssXh5A5xyPbhpewyzRVF");
+declare_id!("t4xet3niAL2gTRxw41M4NjsqAwZHGmWiCnPrBdUGRMJ");
 
 #[program]
 pub mod votingdapp {
     use super::*;
 
-  pub fn close(_ctx: Context<CloseVotingdapp>) -> Result<()> {
-    Ok(())
-  }
-
-  pub fn decrement(ctx: Context<Update>) -> Result<()> {
-    ctx.accounts.votingdapp.count = ctx.accounts.votingdapp.count.checked_sub(1).unwrap();
-    Ok(())
-  }
-
-  pub fn increment(ctx: Context<Update>) -> Result<()> {
-    ctx.accounts.votingdapp.count = ctx.accounts.votingdapp.count.checked_add(1).unwrap();
-    Ok(())
-  }
-
-  pub fn initialize(_ctx: Context<InitializeVotingdapp>) -> Result<()> {
-    Ok(())
-  }
-
-  pub fn set(ctx: Context<Update>, value: u8) -> Result<()> {
-    ctx.accounts.votingdapp.count = value.clone();
+  pub fn initialize_poll(ctx: Context<InitializePoll>,
+                          poll_id:u64,
+                          description:String,
+                          poll_start:u64,
+                          poll_end:u64,
+                        )->Result<()>{
+    let poll = &mut ctx.accounts.poll;
+    poll.poll_id = poll_id;
+    poll.description = description;
+    poll.poll_start = poll_start;
+    poll.poll_end = poll_end;
+    poll.candidate_amount = 0;
     Ok(())
   }
 }
 
 #[derive(Accounts)]
-pub struct InitializeVotingdapp<'info> {
+#[instruction(poll_id:u64)]
+pub struct InitializePoll<'info>{
   #[account(mut)]
-  pub payer: Signer<'info>,
-
+  pub signer:Signer<'info>,
   #[account(
-  init,
-  space = 8 + Votingdapp::INIT_SPACE,
-  payer = payer
-  )]
-  pub votingdapp: Account<'info, Votingdapp>,
-  pub system_program: Program<'info, System>,
-}
-#[derive(Accounts)]
-pub struct CloseVotingdapp<'info> {
-  #[account(mut)]
-  pub payer: Signer<'info>,
+    init,
+    payer = signer,
+    space = 8 + Poll::INIT_SPACE,
+    seeds = [poll_id.to_le_bytes().as_ref()],
+    bump,
+    )]
+  pub poll:Account<'info,Poll>,
 
-  #[account(
-  mut,
-  close = payer, // close account and return lamports to payer
-  )]
-  pub votingdapp: Account<'info, Votingdapp>,
-}
-
-#[derive(Accounts)]
-pub struct Update<'info> {
-  #[account(mut)]
-  pub votingdapp: Account<'info, Votingdapp>,
+  pub system_program:Program<'info, System>,
 }
 
 #[account]
 #[derive(InitSpace)]
-pub struct Votingdapp {
-  count: u8,
+pub struct Poll{
+  pub poll_id:u64,
+  #[max_len(32)]
+  pub description:String,
+  pub poll_start:u64,
+  pub poll_end:u64,
+  pub candidate_amount:u64,
 }
